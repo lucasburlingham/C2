@@ -1,4 +1,4 @@
-# Vehicle C2 Node - Minimal Scaffold
+# Vehicle C2 Node
 
 This repository is a scaffold for the Vehicle C2 Node described in AGENT.md. It contains a FastAPI backend, HTMX-driven frontend templates, and Docker support.
 
