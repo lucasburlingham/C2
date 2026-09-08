@@ -1,0 +1,13 @@
+[Unit]
+Description=Hamlib rigctld (Vehicle C2)
+After=network.target
+
+[Service]
+User=c2
+EnvironmentFile=/etc/vehicle-c2-node.env
+ExecStart=/usr/bin/rigctld -m ${RIG_MODEL} -r ${RIG_DEVICE} -s ${RIGCTLD_PORT} -R
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

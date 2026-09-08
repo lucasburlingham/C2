@@ -1,0 +1,5 @@
+[Unit]
+Description=GPSD override placeholder
+
+[Service]
+# Custom options go here

@@ -1,0 +1,13 @@
+[Unit]
+Description=GPSD daemon (Vehicle C2)
+After=network.target
+
+[Service]
+User=root
+EnvironmentFile=/etc/vehicle-c2-node.env
+ExecStart=/usr/sbin/gpsd -N -F /var/run/gpsd.sock ${GPSD_DEVICE}
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
