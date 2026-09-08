@@ -1,0 +1,10 @@
+# Minimal rtsp-simple-server configuration for local development
+# See https://github.com/aler9/rtsp-simple-server for full options
+paths:
+  all:
+    runOnDemand: none
+    # allow publish from localhost only (useful for security)
+    publishUser: ""
+    publishPass: ""
+    readUser: ""
+    readPass: ""

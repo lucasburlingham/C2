@@ -73,6 +73,37 @@
 
       // small timeslice to produce regular chunks
       mediaRecorder.start(250);
+      // handle optional local playback for VOX (read settings from localStorage via audio-settings)
+      let audioCtx = null;
+      let audioEl = null;
+      let _gainNode = null;
+      let _dest = null;
+      try {
+        const settings = window.getC2AudioSettings ? window.getC2AudioSettings() : null;
+        if (settings && settings.localPlayback) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          const src = audioCtx.createMediaStreamSource(stream);
+          _gainNode = audioCtx.createGain();
+          _gainNode.gain.value = settings.outputGain || 1.0;
+          _dest = audioCtx.createMediaStreamDestination();
+          src.connect(_gainNode);
+          _gainNode.connect(_dest);
+
+          audioEl = document.createElement('audio');
+          audioEl.autoplay = true;
+          audioEl.muted = false;
+          audioEl.srcObject = _dest.stream;
+          // try to set sinkId if available
+          if (settings.outputDeviceId && typeof audioEl.setSinkId === 'function') {
+            try { await audioEl.setSinkId(settings.outputDeviceId); } catch (e) { console.warn('sinkId set failed', e); }
+          }
+          // attach visually-hidden element so it can be controlled/inspected if needed
+          audioEl.style.display = 'none';
+          document.body.appendChild(audioEl);
+        }
+      } catch (e) {
+        console.warn('local playback setup failed', e);
+      }
       // PTT handling: both keyboard (Space) and button/touch
       let isPtt = false;
       const pttBtn = document.getElementById('ptt-btn');
@@ -136,6 +167,19 @@
           pttBtn.removeEventListener('touchstart', handlePttDown);
           pttBtn.removeEventListener('touchend', handlePttUp);
         }
+        // cleanup audio playback nodes
+        try {
+          if (audioEl) {
+            audioEl.pause();
+            audioEl.srcObject = null;
+            if (audioEl.parentNode) audioEl.parentNode.removeChild(audioEl);
+            audioEl = null;
+          }
+          if (audioCtx) {
+            try { audioCtx.close(); } catch (e) {}
+            audioCtx = null;
+          }
+        } catch (e) {}
       };
     } catch (err) {
       console.error('startStreaming error', err);

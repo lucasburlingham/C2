@@ -59,9 +59,19 @@ else
 fi
 
 # ffmpeg drawtext reads 'textfile' and can reload with 'reload=1'
-ffmpeg -hide_banner -loglevel info \
-  -f lavfi -i color=size=${WIDTH}x${HEIGHT}:rate=${FPS}:color=black \
-  ${AUDIO_INPUT_ARGS[@]} \
-  -vf "drawtext=fontfile=${FONT}:fontsize=24:fontcolor=white:x=10:y=10:textfile=${LABEL_FILE}:reload=1" \
-  -c:v libx264 -preset veryfast -tune zerolatency -pix_fmt yuv420p \
-  -c:a aac -b:a 64k -f mpegts "$OUT_URL"
+if echo "$OUT_URL" | grep -qE '^rtsp://'; then
+  echo "Detected RTSP output; streaming to RTSP server: $OUT_URL"
+  ffmpeg -hide_banner -loglevel info \
+    -f lavfi -i color=size=${WIDTH}x${HEIGHT}:rate=${FPS}:color=black \
+    ${AUDIO_INPUT_ARGS[@]} \
+    -vf "drawtext=fontfile=${FONT}:fontsize=24:fontcolor=white:x=10:y=10:textfile=${LABEL_FILE}:reload=1" \
+    -c:v libx264 -preset veryfast -tune zerolatency -pix_fmt yuv420p \
+    -c:a aac -b:a 64k -f rtsp -rtsp_transport tcp "$OUT_URL"
+else
+  ffmpeg -hide_banner -loglevel info \
+    -f lavfi -i color=size=${WIDTH}x${HEIGHT}:rate=${FPS}:color=black \
+    ${AUDIO_INPUT_ARGS[@]} \
+    -vf "drawtext=fontfile=${FONT}:fontsize=24:fontcolor=white:x=10:y=10:textfile=${LABEL_FILE}:reload=1" \
+    -c:v libx264 -preset veryfast -tune zerolatency -pix_fmt yuv420p \
+    -c:a aac -b:a 64k -f mpegts "$OUT_URL"
+fi

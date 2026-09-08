@@ -16,6 +16,8 @@ Or with Docker Compose:
 ```bash
 docker compose up --build -d
 
+```
+
 VLC + ATAK / WinTAK streaming notes
 ----------------------------------
 
@@ -70,4 +72,3 @@ curl "http://localhost:8000/sdr/overlay/list"
 
 The backend will spawn `tools/ffmpeg_atak_overlay.sh` or `tools/gst_atak_overlay.sh` depending on the `engine` parameter and manage the process lifecycle.
 
-```
