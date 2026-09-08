@@ -62,6 +62,9 @@ cd /opt/vehicle-c2-node
 sudo docker-compose up -d --build
 ```
 
+Note: Do not add a top-level `version:` key to your `docker-compose.yml`.
+Modern Docker Compose (v2) uses the compose specification without a `version` field; using the newer format ensures compatibility with current Docker and Compose implementations.
+
 3. Device access notes for Docker:
    - To give containers access to serial devices (rig/GPS), edit `docker-compose.yml` to add `devices:` entries under the `backend` service, e.g.:
 
