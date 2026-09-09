@@ -16,7 +16,9 @@
     const engine = engineEl ? engineEl.value : 'ffmpeg';
     const outEl = document.getElementById(`${streamId}-out-url`);
     const outUrl = outEl ? outEl.value.trim() || 'udp://127.0.0.1:5004' : 'udp://127.0.0.1:5004';
-    const params = new URLSearchParams({ engine, audio_device: 'default', out_url: outUrl });
+    const csEl = document.getElementById(`${streamId}-callsign`);
+    const callsign = csEl ? (csEl.value.trim() || '') : '';
+    const params = new URLSearchParams({ engine, audio_device: 'default', out_url: outUrl, callsign });
     const resp = await fetch(`/sdr/${streamId}/overlay/start?${params.toString()}`, { method: 'POST' });
     return resp.json();
   }

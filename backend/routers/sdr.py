@@ -31,11 +31,11 @@ async def get_frequency(stream_id: str):
 
 
 @router.post("/{stream_id}/overlay/start")
-async def start_overlay(stream_id: str, engine: str = 'ffmpeg', audio_device: str = 'default', out_url: str = 'udp://127.0.0.1:5004'):
+async def start_overlay(stream_id: str, engine: str = 'ffmpeg', audio_device: str = 'default', out_url: str = 'udp://127.0.0.1:5004', callsign: str = None):
     from ..services import overlay_manager
     # ensure the stream is started
     sdr_service.start_stream(stream_id)
-    return overlay_manager.start_overlay(stream_id, engine=engine, audio_device=audio_device, out_url=out_url)
+    return overlay_manager.start_overlay(stream_id, engine=engine, audio_device=audio_device, out_url=out_url, callsign=callsign)
 
 
 @router.post("/{stream_id}/overlay/stop")

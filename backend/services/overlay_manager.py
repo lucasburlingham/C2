@@ -24,6 +24,7 @@ def _script_for_engine(engine: str) -> Optional[str]:
 
 
 def start_overlay(stream_id: str, engine: str = 'ffmpeg', audio_device: str = 'default', out_url: str = 'udp://127.0.0.1:5004') -> dict:
+def start_overlay(stream_id: str, engine: str = 'ffmpeg', audio_device: str = 'default', out_url: str = 'udp://127.0.0.1:5004', callsign: str = None) -> dict:
     script = _script_for_engine(engine)
     if script is None or not os.path.exists(script):
         return {'ok': False, 'error': f'unsupported engine or missing script: {engine}'}
@@ -71,6 +72,23 @@ def start_overlay(stream_id: str, engine: str = 'ffmpeg', audio_device: str = 'd
             return {'ok': False, 'error': str(e)}
 
         _overlays[stream_id] = {'proc': proc, 'engine': engine, 'cmd': cmd, 'relay': relay_started, 'log_path': log_path, 'log_fd': log_fd}
+        # if RTSP output was requested, send a CoT PLI multicast announcing availability
+        try:
+            if out_url and isinstance(out_url, str) and out_url.startswith('rtsp://'):
+                try:
+                    from . import cot_service
+                    from . import gps_service
+                    # use provided callsign if present else fallback to stream_id
+                    cs = callsign if callsign else f"{stream_id}"
+                    gps = gps_service.get_gps_status(timeout=1.0)
+                    lat = gps.get('lat') or 0.0
+                    lon = gps.get('lon') or 0.0
+                    # include RTSP URL in the CoT detail so listeners know where to connect
+                    cot_service.send_pli_multicast(cs, lat, lon, rtsp_url=out_url)
+                except Exception:
+                    pass
+        except Exception:
+            pass
         return {'ok': True, 'stream_id': stream_id, 'pid': proc.pid, 'log_path': log_path}
 
 

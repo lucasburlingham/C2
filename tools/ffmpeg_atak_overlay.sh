@@ -11,6 +11,7 @@ set -euo pipefail
 STREAM_ID="sdr1"
 AUDIO_DEVICE="default"
 OUT_URL="udp://127.0.0.1:5004"
+INPUT_FORMAT=""
 FONT="/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 FPS=15
 WIDTH=500
@@ -31,6 +32,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --stream-id) STREAM_ID="$2"; shift 2;;
     --audio-device) AUDIO_DEVICE="$2"; shift 2;;
+    --input-format) INPUT_FORMAT="$2"; shift 2;;
     --out) OUT_URL="$2"; shift 2;;
     --font) FONT="$2"; shift 2;;
     -h|--help) print_help; exit 0;;
@@ -52,7 +54,12 @@ echo "Streaming video $WIDTH x $HEIGHT with label overlay from $LABEL_FILE to $O
 
 # prepare audio input args depending on scheme
 if echo "$AUDIO_DEVICE" | grep -qE '^(tcp|udp|http|https)://'; then
-  AUDIO_INPUT_ARGS=( -i "$AUDIO_DEVICE" )
+  # network input: allow forcing an input format (e.g., mpegts, s16le, webm)
+  if [ -n "$INPUT_FORMAT" ]; then
+    AUDIO_INPUT_ARGS=( -f "$INPUT_FORMAT" -i "$AUDIO_DEVICE" )
+  else
+    AUDIO_INPUT_ARGS=( -i "$AUDIO_DEVICE" )
+  fi
 else
   # default to ALSA capture
   AUDIO_INPUT_ARGS=( -f alsa -i "$AUDIO_DEVICE" )
