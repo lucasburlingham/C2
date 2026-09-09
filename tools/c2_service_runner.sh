@@ -13,6 +13,16 @@ if [ -z "$ROOT" ]; then
   ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 fi
 
+# ensure we run from the repo root so Python can import local packages
+cd "$ROOT" || true
+
+# export PYTHONPATH so uvicorn can find the `backend` package even if cwd isn't honored
+export PYTHONPATH="$ROOT${PYTHONPATH:+:$PYTHONPATH}"
+
+echo "Runner starting with ROOT=$ROOT" >> "$UVICORN_LOG" 2>&1 || true
+echo "PWD=$(pwd)" >> "$UVICORN_LOG" 2>&1 || true
+echo "PYTHONPATH=$PYTHONPATH" >> "$UVICORN_LOG" 2>&1 || true
+
 # virtualenv subpath under ROOT (created by installer)
 VENV_SUBPATH="venv"
 

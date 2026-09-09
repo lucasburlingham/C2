@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 # Optionally set C2_ROOT in an Environment or EnvironmentFile; otherwise the runner will autodetect.
 Environment=C2_ROOT=/opt/c2
-ExecStart=/bin/bash -c '$C2_ROOT/tools/c2_service_runner.sh'
+ExecStart=/opt/c2/tools/c2_service_runner.sh
 Restart=on-failure
 RestartSec=5
 User=c2
