@@ -115,6 +115,24 @@ fi
 # set ownership of installed files
 chown -R "$USER_NAME":"$USER_NAME" "$PREFIX" || true
 
+# install serial device selection helper and default config
+mkdir -p /etc/c2
+if [ ! -f /etc/c2/devices.conf ]; then
+  cat > /etc/c2/devices.conf <<'EOF'
+# C2 device mappings
+# Format: ROLE=/dev/serial/by-id/...
+# Example:
+# rig=/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_AH02ABCDEFG
+EOF
+  chmod 644 /etc/c2/devices.conf
+fi
+
+if [ -f "$PREFIX/tools/select_serial_devices.sh" ]; then
+  cp "$PREFIX/tools/select_serial_devices.sh" /usr/local/bin/c2-select-devices
+  chmod +x /usr/local/bin/c2-select-devices
+  chown root:root /usr/local/bin/c2-select-devices
+fi
+
 # reload systemd and enable/start service
 if command -v systemctl >/dev/null 2>&1 && [ $ENABLE -eq 1 ]; then
   systemctl daemon-reload
