@@ -13,6 +13,9 @@ if [ -z "$ROOT" ]; then
   ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 fi
 
+# virtualenv subpath under ROOT (created by installer)
+VENV_SUBPATH="venv"
+
 LOGDIR="/var/log/c2"
 mkdir -p "$LOGDIR"
 
@@ -36,8 +39,15 @@ function start_rtsp() {
 
 function start_uvicorn() {
   echo "Starting uvicorn..." >> "$UVICORN_LOG" 2>&1 || true
-  # run uvicorn from the same python environment; rely on PATH
-  nohup python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 >> "$UVICORN_LOG" 2>&1 &
+  # prefer virtualenv python under the repo root if present
+  if [ -x "$ROOT/venv/bin/python" ]; then
+    UV_PY="$ROOT/venv/bin/python"
+  elif [ -x "$ROOT/$VENV_SUBPATH/bin/python" ]; then
+    UV_PY="$ROOT/$VENV_SUBPATH/bin/python"
+  else
+    UV_PY="python"
+  fi
+  nohup "$UV_PY" -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 >> "$UVICORN_LOG" 2>&1 &
   PIDS+=("$!")
   echo "uvicorn pid $!" >> "$UVICORN_LOG" 2>&1 || true
 }

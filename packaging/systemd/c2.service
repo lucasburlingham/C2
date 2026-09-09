@@ -9,8 +9,12 @@ Environment=C2_ROOT=/opt/c2
 ExecStart=/bin/bash -c '$C2_ROOT/tools/c2_service_runner.sh'
 Restart=on-failure
 RestartSec=5
-User=root
-WorkingDirectory=%h
+User=c2
+Group=c2
+WorkingDirectory=${C2_ROOT}
+RuntimeDirectory=c2
+RuntimeDirectoryMode=0755
+PIDFile=/run/c2_service.pid
 
 [Install]
 WantedBy=multi-user.target
