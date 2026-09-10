@@ -1,14 +1,19 @@
-version: '3.8'
 services:
   backend:
     build: ./backend
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app
+      - .:/app
     restart: unless-stopped
     env_file:
-      - ./systemd/vehicle-c2.env.example
+      - ./systemd/vehicle-c2.env
     devices:
-      - "/dev/ttyUSB0:/dev/ttyUSB0"
-      - "/dev/ttyUSB1:/dev/ttyUSB1"
+      - "/dev/ttyACM0:/dev/ttyACM0" # GPS (u-blox) - mapped from host
+      - "/dev/rtlsdr-00001000:/dev/rtlsdr-00001000" # RTL-SDR #1 (udev symlink)
+      - "/dev/rtlsdr-00002000:/dev/rtlsdr-00002000" # RTL-SDR #2 (udev symlink)
+      - "/dev/bus/usb:/dev/bus/usb" # expose USB bus nodes for libusb access
+      - "/dev/snd:/dev/snd" # expose ALSA devices (include snd-aloop on host for loopback)
+    # If you want to expose SDR USB devices by bus/device path, add entries like:
+    #   - "/dev/bus/usb/007/006:/dev/bus/usb/007/006"  # RTL2838 (ID 0bda:2838)
+    # or create persistent udev symlinks and map those (recommended).

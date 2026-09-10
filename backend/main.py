@@ -1,6 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
 
@@ -14,14 +15,16 @@ app.add_middleware(
 )
 
 BASE_DIR = os.path.dirname(__file__)
+
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "../frontend/templates"))
 
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "../frontend/static")), name="static")
 
 
 @app.get("/")
-async def index(request):
-    return templates.TemplateResponse("index.html", {"request": request})
+async def index(request: Request):
+    # Serve the frontend index.html directly to avoid Jinja2 caching issues in some environments.
+    return FileResponse(os.path.join(BASE_DIR, "../frontend/templates/index.html"))
 
 # Routers (imported lazily to avoid circular imports during scaffold)
 try:

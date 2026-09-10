@@ -2,7 +2,7 @@
 
 This document describes common ways to take demodulated audio from an RTL‑SDR (or other demodulator) and feed it into the project's `ffmpeg` overlay pipeline (see `tools/ffmpeg_atak_overlay.sh`). Pick the approach that best fits your platform and latency requirements.
 
-Prerequisites
+## Prerequisites
 - `rtl-sdr` tools (e.g. `rtl_fm`) or your preferred demodulator (GNU Radio, GStreamer)
 - `ffmpeg` (with codecs for aac/libx264)
 - `alsa-utils` (`arecord`, `aplay`) for ALSA loopback approach on Linux
@@ -25,8 +25,30 @@ rtl_fm -f 146.520M -M fm -s 22050 - | \
 ```
 
 Notes:
-- `-f s16le -ar 22050 -ac 1` must match the raw PCM output from your demodulator.
-- This writes the audio into ffmpeg's stdin. To use this with the overlay script, you would run a separate ffmpeg instance that writes to a network URL and then point the overlay `--audio-device` at that URL.
+Note: Do not add a top-level `version:` key to your `docker-compose.yml`.  
+Modern Docker Compose (v2) uses the compose specification without a `version` field; using the newer format ensures compatibility with current Docker and Compose implementations.  
+
+## Device mapping and SDR notes
+- If you plan to run SDR hardware inside the `backend` container, this repository includes a packaged udev rule that creates stable symlinks for RTL‑SDR devices: [packaging/udev/99-vehicle-c2-rtlsdr.rules](packaging/udev/99-vehicle-c2-rtlsdr.rules).
+- The installer or administrator should copy that file to `/etc/udev/rules.d/` and reload udev rules:
+
+```bash
+sudo cp packaging/udev/99-vehicle-c2-rtlsdr.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules && sudo udevadm trigger
+```
+
+- After reloading, you should see stable symlinks like `/dev/rtlsdr-00001000` and `/dev/rtlsdr-00002000` pointing at the kernel USB device nodes. Prefer mapping the symlinks into the container rather than bus-specific paths. Example `docker-compose.yml` fragment:
+
+```yaml
+services:
+  backend:
+    devices:
+      - /dev/rtlsdr-00001000:/dev/rtlsdr-00001000
+      - /dev/rtlsdr-00002000:/dev/rtlsdr-00002000
+      - /dev/bus/usb:/dev/bus/usb  # required for libusb access from inside the container
+```
+
+- Note: the backend image built by this repository now installs the `rtl-sdr` package so `rtl_test`, `rtl_fm`, and related utilities are available inside the container when rebuilt.
 
 2) ALSA loopback (recommended for local setups)
 This method creates a virtual ALSA device so you can write demodulated audio to the loopback playback device and have ffmpeg capture it as a normal capture device.

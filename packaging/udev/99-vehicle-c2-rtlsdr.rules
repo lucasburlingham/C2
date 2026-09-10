@@ -1,0 +1,9 @@
+# udev rule to create stable symlinks for RTL-SDR (Realtek 0bda:2838) devices
+# Creates /dev/rtlsdr-<serial> when the device exposes a serial number.
+
+SUBSYSTEM=="usb", ATTR{idVendor}=="0bda", ATTR{idProduct}=="2838", ENV{ID_SERIAL_SHORT}!="", \
+    SYMLINK+="rtlsdr-%E{ID_SERIAL_SHORT}", MODE="0660", GROUP="plugdev"
+
+# Fallback: if no serial is present, create a symlink using the kernel name
+SUBSYSTEM=="usb", ATTR{idVendor}=="0bda", ATTR{idProduct}=="2838", \
+    SYMLINK+="rtlsdr-%k", MODE="0660", GROUP="plugdev"

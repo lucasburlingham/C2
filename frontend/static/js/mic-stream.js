@@ -118,17 +118,25 @@
 
       function handleKeyDown(e) {
         if (e.code === 'Space' && !isPtt && document.activeElement.tagName !== 'INPUT') {
-          isPtt = true;
-          sendPtt(true);
-          if (pttBtn) pttBtn.classList.add('active');
+            isPtt = true;
+            sendPtt(true);
+            if (pttBtn) {
+              pttBtn.classList.remove('bg-blue-600');
+              pttBtn.classList.add('bg-red-600', 'text-white', 'animate-pulse');
+              pttBtn.innerText = 'PTT (TX)';
+            }
         }
       }
 
       function handleKeyUp(e) {
         if (e.code === 'Space' && isPtt) {
-          isPtt = false;
-          sendPtt(false);
-          if (pttBtn) pttBtn.classList.remove('active');
+              isPtt = false;
+              sendPtt(false);
+              if (pttBtn) {
+                pttBtn.classList.add('bg-blue-600');
+                pttBtn.classList.remove('bg-red-600', 'text-white', 'animate-pulse');
+                pttBtn.innerText = 'PTT';
+              }
         }
       }
 
@@ -136,7 +144,11 @@
         if (!isPtt) {
           isPtt = true;
           sendPtt(true);
-          if (pttBtn) pttBtn.classList.add('active');
+            if (pttBtn) {
+              pttBtn.classList.remove('bg-blue-600');
+              pttBtn.classList.add('bg-red-600', 'text-white', 'animate-pulse');
+              pttBtn.innerText = 'PTT (TX)';
+            }
         }
       }
 
@@ -144,7 +156,11 @@
         if (isPtt) {
           isPtt = false;
           sendPtt(false);
-          if (pttBtn) pttBtn.classList.remove('active');
+            if (pttBtn) {
+              pttBtn.classList.add('bg-blue-600');
+              pttBtn.classList.remove('bg-red-600', 'text-white', 'animate-pulse');
+              pttBtn.innerText = 'PTT';
+            }
         }
       }
 

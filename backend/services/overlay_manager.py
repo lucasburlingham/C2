@@ -23,7 +23,6 @@ def _script_for_engine(engine: str) -> Optional[str]:
     return None
 
 
-def start_overlay(stream_id: str, engine: str = 'ffmpeg', audio_device: str = 'default', out_url: str = 'udp://127.0.0.1:5004') -> dict:
 def start_overlay(stream_id: str, engine: str = 'ffmpeg', audio_device: str = 'default', out_url: str = 'udp://127.0.0.1:5004', callsign: str = None) -> dict:
     script = _script_for_engine(engine)
     if script is None or not os.path.exists(script):
@@ -71,7 +70,16 @@ def start_overlay(stream_id: str, engine: str = 'ffmpeg', audio_device: str = 'd
                     pass
             return {'ok': False, 'error': str(e)}
 
-        _overlays[stream_id] = {'proc': proc, 'engine': engine, 'cmd': cmd, 'relay': relay_started, 'log_path': log_path, 'log_fd': log_fd}
+        _overlays[stream_id] = {
+            'proc': proc,
+            'engine': engine,
+            'cmd': cmd,
+            'relay': relay_started,
+            'log_path': log_path,
+            'log_fd': log_fd,
+            'out_url': out_url,
+            'audio_device': audio_device,
+        }
         # if RTSP output was requested, send a CoT PLI multicast announcing availability
         try:
             if out_url and isinstance(out_url, str) and out_url.startswith('rtsp://'):
@@ -89,7 +97,7 @@ def start_overlay(stream_id: str, engine: str = 'ffmpeg', audio_device: str = 'd
                     pass
         except Exception:
             pass
-        return {'ok': True, 'stream_id': stream_id, 'pid': proc.pid, 'log_path': log_path}
+        return {'ok': True, 'stream_id': stream_id, 'pid': proc.pid, 'log_path': log_path, 'out_url': out_url, 'audio_device': audio_device}
 
 
 def stop_overlay(stream_id: str) -> dict:
@@ -160,10 +168,18 @@ def status_overlay(stream_id: str) -> dict:
     with _lock:
         meta = _overlays.get(stream_id)
         if not meta:
-            return {'ok': False, 'running': False}
+            # Not running is a valid known state; report ok=True with running=False
+            return {'ok': True, 'running': False}
         proc = meta['proc']
         running = proc.poll() is None
-        return {'ok': True, 'running': running, 'pid': proc.pid, 'engine': meta.get('engine')}
+        return {
+            'ok': True,
+            'running': running,
+            'pid': proc.pid,
+            'engine': meta.get('engine'),
+            'out_url': meta.get('out_url'),
+            'audio_device': meta.get('audio_device'),
+        }
 
 
 def list_overlays() -> Dict[str, Dict]:
@@ -171,5 +187,11 @@ def list_overlays() -> Dict[str, Dict]:
         out = {}
         for sid, meta in _overlays.items():
             proc = meta['proc']
-            out[sid] = {'running': proc.poll() is None, 'pid': proc.pid, 'engine': meta.get('engine')}
+            out[sid] = {
+                'running': proc.poll() is None,
+                'pid': proc.pid,
+                'engine': meta.get('engine'),
+                'out_url': meta.get('out_url'),
+                'audio_device': meta.get('audio_device'),
+            }
         return out

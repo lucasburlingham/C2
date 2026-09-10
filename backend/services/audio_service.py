@@ -1,5 +1,9 @@
 import asyncio
+import os
 from typing import Dict, Set
+
+# import shared state dir from sdr_service
+from .sdr_service import STATE_DIR
 
 # _streams maps stream_id -> set of websockets
 _streams: Dict[str, Set[asyncio.AbstractEventLoop]] = {}
@@ -136,8 +140,126 @@ async def ptt_event(stream_id: str, websocket, state: bool):
             await _set_active_username(stream_id, username)
             return {'ok': True}
         else:
-            # schedule clear after timeout (reset timer)
-            await _set_active_username(stream_id, username)
+            # schedule a clear of the active username after a short grace period
+            try:
+                # cancel existing timer if present
+                handle = _active_timers.get(stream_id)
+                if handle:
+                    try:
+                        handle.cancel()
+                    except Exception:
+                        pass
+                loop = asyncio.get_event_loop()
+
+                def _clear_release():
+                    try:
+                        cur = _active_username.get(stream_id)
+                        if cur == username:
+                            try:
+                                from . import sdr_service as _sdr
+                                _sdr.set_user(stream_id, None)
+                            except Exception:
+                                pass
+                            _active_username.pop(stream_id, None)
+                    except Exception:
+                        pass
+
+                # short grace before clearing (2s)
+                _active_timers[stream_id] = loop.call_later(2, _clear_release)
+            except Exception:
+                pass
             return {'ok': True}
     except Exception as e:
         return {'ok': False, 'error': str(e)}
+
+
+def list_alsa_devices() -> dict:
+    """Return a structured list of ALSA capture/playback devices by parsing `arecord -l` output.
+    Returns {'cards': [ { 'card': int, 'name': str, 'devices': [ { 'device': int, 'name': str } ] } ] }
+    """
+    import subprocess
+    import re
+
+    try:
+        out = subprocess.check_output(['arecord', '-l'], stderr=subprocess.STDOUT, text=True)
+    except Exception:
+        # fallback: try to read /proc/asound/cards
+        try:
+            with open('/proc/asound/cards', 'r', encoding='utf-8') as f:
+                data = f.read()
+        except Exception:
+            return {'cards': []}
+        out = data
+
+    cards = []
+    # parse lines like: card 3: Loopback [Loopback], device 0: Loopback PCM [Loopback PCM]
+    card_re = re.compile(r"card\s+(\d+):\s*([^\[]+?)\s*\[([^\]]+)\]")
+    dev_re = re.compile(r"device\s+(\d+):\s*([^\[]+?)\s*\[([^\]]+)\]")
+
+    current = None
+    for line in out.splitlines():
+        m = card_re.search(line)
+        if m:
+            card_no = int(m.group(1))
+            card_name = m.group(2).strip()
+            current = {'card': card_no, 'name': card_name, 'devices': []}
+            cards.append(current)
+            continue
+        m2 = dev_re.search(line)
+        if m2 and current is not None:
+            dev_no = int(m2.group(1))
+            dev_name = m2.group(2).strip()
+            current['devices'].append({'device': dev_no, 'name': dev_name})
+
+    return {'cards': cards}
+
+
+def find_alsa_for_usb(bus: int, dev: int) -> str:
+    """Return ALSA hw string for given USB bus and device (e.g. 'hw:Card3,0'), or empty string if not found."""
+    import os
+
+    # normalize
+    bus = int(bus)
+    dev = int(dev)
+    # look through sound cards
+    cards_dir = '/sys/class/sound'
+    if not os.path.exists(cards_dir):
+        return ''
+    for name in os.listdir(cards_dir):
+        if not name.startswith('card'):
+            continue
+        card_no = int(name.replace('card', ''))
+        devpath = os.path.realpath(os.path.join(cards_dir, name, 'device'))
+        # walk ancestors looking for usb node like '3-5'
+        parts = devpath.split(os.sep)
+        for i in range(len(parts)):
+            part = parts[i]
+            if '-' in part:
+                try:
+                    pbus, pdev = part.split('-', 1)
+                    if int(pbus) == bus and int(pdev) == dev:
+                        # found matching usb device
+                        return f'hw:Card{card_no},0'
+                except Exception:
+                    pass
+    return ''
+
+
+def write_server_audio_device(hw: str) -> None:
+    path = os.path.join(STATE_DIR, 'server_audio_device.txt')
+    try:
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(hw)
+    except Exception:
+        pass
+
+
+def read_server_audio_device() -> str:
+    path = os.path.join(STATE_DIR, 'server_audio_device.txt')
+    try:
+        if os.path.exists(path):
+            with open(path, 'r', encoding='utf-8') as f:
+                return f.read().strip()
+    except Exception:
+        pass
+    return ''

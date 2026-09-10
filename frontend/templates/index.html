@@ -4,7 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Vehicle C2 Node</title>
-    <script src="https://unpkg.com/htmx.org@1.10.0"></script>
+        <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js"
+          integrity="sha384-H5SrcfygHmAuTDZphMHqBJLc3FhssKjG7w/CeCpFReSfwBWDTKpkzPP8c+cLsK+V"
+          crossorigin="anonymous"></script>
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
   <body class="bg-zinc-900 text-zinc-100">
@@ -27,7 +29,10 @@
 
             <div class="mb-3 mt-3 p-3 bg-zinc-900 rounded">
               <h3 class="font-medium mb-2">Audio Settings (VOX Playback)</h3>
-              <div class="flex items-center gap-2">
+              <div class="mb-2">
+                <button id="open-sound-settings" class="px-2 py-1 bg-sky-600 text-white rounded">Sound Settings</button>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
                 <label class="text-sm text-zinc-300">Enable Local Playback:</label>
                 <input id="audio-local-playback" type="checkbox" />
                 <label class="text-sm text-zinc-300 ml-4">Output Device:</label>
@@ -58,6 +63,11 @@
                       </select>
                       <input id="sdr1-out-url" class="bg-zinc-800 rounded px-2 py-1 ml-2" placeholder="out url" value="udp://127.0.0.1:5004" />
                       <input id="sdr1-callsign" class="bg-zinc-800 rounded px-2 py-1 ml-2" placeholder="callsign (optional)" />
+                      <select id="sdr1-audio-src" class="bg-zinc-800 rounded px-2 py-1 ml-2">
+                        <option value="default">Audio: ALSA/default</option>
+                        <option value="server">Audio: Server device</option>
+                        <option value="rtl_fm">Audio: rtl_fm (demodulate)</option>
+                      </select>
                     </div>
                     <div class="w-1/3 text-right">
                       <button data-stream="sdr1" class="start-overlay px-2 py-1 bg-green-600 rounded">Start Overlay</button>
@@ -65,6 +75,8 @@
                     </div>
                   </div>
                   <div class="mt-2 text-sm text-zinc-400">Status: <span id="sdr1-overlay-status">unknown</span></div>
+                  <div class="mt-1 text-sm text-zinc-400">Video URL: <span id="sdr1-video-url">-</span></div>
+                  <div class="mt-1 text-sm text-zinc-400">Audio URL: <span id="sdr1-audio-url">-</span></div>
                   <pre id="sdr1-overlay-log" class="mt-2 p-2 bg-black text-green-300 text-xs h-40 overflow-auto"></pre>
                 </div>
 
@@ -79,6 +91,11 @@
                       </select>
                       <input id="sdr2-out-url" class="bg-zinc-800 rounded px-2 py-1 ml-2" placeholder="out url" value="udp://127.0.0.1:5004" />
                       <input id="sdr2-callsign" class="bg-zinc-800 rounded px-2 py-1 ml-2" placeholder="callsign (optional)" />
+                      <select id="sdr2-audio-src" class="bg-zinc-800 rounded px-2 py-1 ml-2">
+                        <option value="default">Audio: ALSA/default</option>
+                        <option value="server">Audio: Server device</option>
+                        <option value="rtl_fm">Audio: rtl_fm (demodulate)</option>
+                      </select>
                     </div>
                     <div class="w-1/3 text-right">
                       <button data-stream="sdr2" class="start-overlay px-2 py-1 bg-green-600 rounded">Start Overlay</button>
@@ -86,6 +103,8 @@
                     </div>
                   </div>
                   <div class="mt-2 text-sm text-zinc-400">Status: <span id="sdr2-overlay-status">unknown</span></div>
+                  <div class="mt-1 text-sm text-zinc-400">Video URL: <span id="sdr2-video-url">-</span></div>
+                  <div class="mt-1 text-sm text-zinc-400">Audio URL: <span id="sdr2-audio-url">-</span></div>
                   <pre id="sdr2-overlay-log" class="mt-2 p-2 bg-black text-green-300 text-xs h-40 overflow-auto"></pre>
                 </div>
               </div>
@@ -94,7 +113,36 @@
           </div>
           <p class="mt-3 text-sm text-zinc-400">This example captures microphone audio and streams raw audio frames over WebSocket to <code>/ws/audio/teststream</code>. Overlay controls start/stop server-side ffmpeg/gst processes that render a small video with the current frequency.</p>
         </div>
-        <div class="p-3 bg-zinc-800 rounded shadow">Radio Panel (placeholder)</div>
+        <div class="p-3 bg-zinc-800 rounded shadow">
+          <h2 class="font-medium mb-2">Radio Panel</h2>
+          <div id="radio-controls">
+            <div class="mb-3">
+              <div class="flex flex-wrap items-center gap-2">
+                <label class="w-28 text-sm text-zinc-300">sdr1 (MHz):</label>
+                <input id="sdr1-freq" class="bg-zinc-800 rounded px-2 py-1" placeholder="e.g., 146.910" />
+                <button id="sdr1-set" class="px-2 py-1 bg-sky-600 text-white rounded ml-2">Set</button>
+                <select id="sdr1-presets" class="bg-zinc-800 rounded px-2 py-1 ml-2"></select>
+                <button id="sdr1-apply-preset" class="px-2 py-1 bg-green-600 text-white rounded ml-2">Apply</button>
+                <button id="sdr1-save-preset" class="px-2 py-1 bg-amber-600 text-black rounded ml-2">Save Preset</button>
+                <button id="sdr1-remove-preset" class="px-2 py-1 bg-red-600 text-white rounded ml-2">Remove</button>
+                <span id="sdr1-current" class="ml-3 text-sm text-zinc-300"></span>
+              </div>
+            </div>
+            <div class="mb-3">
+              <div class="flex items-center gap-2">
+                <label class="w-28 text-sm text-zinc-300">sdr2 (MHz):</label>
+                <input id="sdr2-freq" class="bg-zinc-800 rounded px-2 py-1" placeholder="e.g., 430.125" />
+                <button id="sdr2-set" class="px-2 py-1 bg-sky-600 text-white rounded ml-2">Set</button>
+                <select id="sdr2-presets" class="bg-zinc-800 rounded px-2 py-1 ml-2"></select>
+                <button id="sdr2-apply-preset" class="px-2 py-1 bg-green-600 text-white rounded ml-2">Apply</button>
+                <button id="sdr2-save-preset" class="px-2 py-1 bg-amber-600 text-black rounded ml-2">Save Preset</button>
+                <button id="sdr2-remove-preset" class="px-2 py-1 bg-red-600 text-white rounded ml-2">Remove</button>
+                <span id="sdr2-current" class="ml-3 text-sm text-zinc-300"></span>
+              </div>
+            </div>
+            <div class="text-sm text-zinc-400">Set frequencies in MHz for each SDR stream. Values are multiplied by 1e6 and sent to the server.</div>
+          </div>
+        </div>
         <div class="p-3 bg-zinc-800 rounded shadow">TAK Panel (placeholder)</div>
         <div class="p-3 bg-zinc-800 rounded shadow">System Status (placeholder)</div>
       </div>
@@ -102,5 +150,9 @@
     <script src="/static/js/audio-settings.js"></script>
     <script src="/static/js/audio-test.js"></script>
     <script src="/static/js/mic-stream.js"></script>
+    <script src="/static/js/overlay-control.js"></script>
+    <script src="/static/js/sound-settings.js"></script>
+    <script src="/static/js/radio-control.js"></script>
+    <script src="/static/js/radio-presets.js"></script>
   </body>
 </html>

@@ -18,7 +18,12 @@
     const outUrl = outEl ? outEl.value.trim() || 'udp://127.0.0.1:5004' : 'udp://127.0.0.1:5004';
     const csEl = document.getElementById(`${streamId}-callsign`);
     const callsign = csEl ? (csEl.value.trim() || '') : '';
-    const params = new URLSearchParams({ engine, audio_device: 'default', out_url: outUrl, callsign });
+    const audioSrcEl = document.getElementById(`${streamId}-audio-src`);
+    const audioSrc = audioSrcEl ? audioSrcEl.value : 'default';
+    let audio_device = 'default';
+    if (audioSrc === 'server') audio_device = (window.getServerAudioDevice && window.getServerAudioDevice()) || 'default';
+    else if (audioSrc === 'rtl_fm') audio_device = 'rtl_fm';
+    const params = new URLSearchParams({ engine, audio_device, out_url: outUrl, callsign });
     const resp = await fetch(`/sdr/${streamId}/overlay/start?${params.toString()}`, { method: 'POST' });
     return resp.json();
   }
@@ -38,6 +43,13 @@
     if (el) el.innerText = txt;
   }
 
+  function setFeedUrls(streamId, videoUrl, audioUrl) {
+    const v = document.getElementById(`${streamId}-video-url`);
+    const a = document.getElementById(`${streamId}-audio-url`);
+    if (v) v.innerText = videoUrl || '-';
+    if (a) a.innerText = audioUrl || '-';
+  }
+
   // attach buttons
   document.addEventListener('click', async (e) => {
     const startBtn = e.target.closest('.start-overlay');
@@ -47,6 +59,7 @@
       setStatusText(sid, 'starting...');
       const r = await startOverlay(sid);
       setStatusText(sid, r.ok ? `running (pid ${r.pid})` : `error: ${r.error}`);
+      if (r.ok) setFeedUrls(sid, r.out_url, r.audio_device);
     }
     if (stopBtn) {
       const sid = stopBtn.getAttribute('data-stream');
@@ -63,7 +76,9 @@
       try {
         const st = await getStatus(s);
         if (st.ok && st.running) setStatusText(s, `running (pid ${st.pid})`);
-        else if (st.ok) setStatusText(s, 'not running');
+          else if (st.ok) setStatusText(s, 'not running');
+          // update feed urls when available
+          if (st.ok) setFeedUrls(s, st.out_url, st.audio_device);
         else setStatusText(s, 'unknown');
       } catch (e) {
         setStatusText(s, 'error');
